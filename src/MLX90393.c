@@ -3,7 +3,39 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** Helper functions**/
 
+/**
+ * @brief Helper function to find the number of quantities to measure (needed to compute the number of bytes to expect within sensor response to measurement read operations)
+ * 
+ * @param zyxt Magnetic axes-temperature measurement setting
+ * @return uint8_t Count result (no greater than 4)
+ */
+uint8_t count_set_bits(uint8_t zyxt){
+    uint8_t result = 0;
+    while(zyxt){ //Mientras haya al menos un 1
+        result++;
+        zyxt &= zyxt - 1; //Quito el LSb que tenga un 1
+    }
+    if(result > 4){
+        result = 0;
+    }
+    return result;
+}
+
+/**
+ * @brief Helper function that calls automatically MLX90393_GetSettings(). This function is created for ease of unit testing.
+ * 
+ * @param dev Handle to MLX90393 device
+ * @return int32_t MLX90393_GetSettings error code
+ */
+__attribute__((weak)) int32_t GetSettings(mlx_i2c_t *dev){
+    return MLX90393_GetSettings(dev);
+}
+
+__attribute__((weak)) int32_t ApplySettings(mlx_i2c_t *dev, mlx_cfg_t *settings){
+    return MLX90393_ApplySettings(dev, settings);
+}
 //LOOKUPS
 //Magnetic sensitivity [Gain (0 - 7)][Res (16 - 19)][SensXY/SensZ]
 const float MLX90393_Sensitivity_LookUp[8][4][2] = {
@@ -362,7 +394,7 @@ int32_t MLX90393_readXYZ(mlx_i2c_t *dev, float *xyz){
     uint8_t status;
     
     /*Start measurement*/
-    ret = MLX90393_SM(dev, MAG_XYZ, &status);
+    ret = MLX90393_SM(dev, MLX90393_MAG_XYZ, &status);
     if (ret != 0){
         return ret;
     }
@@ -371,7 +403,7 @@ int32_t MLX90393_readXYZ(mlx_i2c_t *dev, float *xyz){
 
     //Read measurement
     uint8_t data[6];
-    ret = MLX90393_RM(dev, MAG_XYZ, &status, data);
+    ret = MLX90393_RM(dev, MLX90393_MAG_XYZ, &status, data);
     if (ret != 0){
         return ret;
     }
@@ -398,35 +430,24 @@ int32_t MLX90393_readXYZ(mlx_i2c_t *dev, float *xyz){
     return ret;
 }
 
-int32_t MLX90393_Init(mlx_i2c_t *dev){
-
+/**
+ * @brief MLX90393 device initialisation function
+ * 
+ * @param dev Handle to MLX90393 device
+ * @param settings [Optional] Pointer to MLX90393 settings structure to write to the device
+ * @return int32_t 
+ */
+int32_t MLX90393_Init(mlx_i2c_t *dev, mlx_cfg_t *settings){
     if(dev == NULL){
         return 1;
     } 
     if(dev->read_function == NULL || dev->write_function == NULL || dev->mdelay == NULL){
         return 2;
     }
-    //return MLX90393_GetSettings(dev);
-    return 0;
+    if (settings == NULL){ //If the user doesn't provide its own "new" settings, we test the device by reading the current settings and storing them to the dev structure
+        return GetSettings(dev);
+    }
+    return ApplySettings(dev, settings); //Otherwise, we overwrite the user settings
 }
 
 
-/** Helper functions**/
-
-/**
- * @brief Helper function to find the number of quantities to measure (needed to compute the number of bytes to expect within sensor response to measurement read operations)
- * 
- * @param zyxt Magnetic axes-temperature measurement setting
- * @return uint8_t Count result (no greater than 4)
- */
-uint8_t count_set_bits(uint8_t zyxt){
-    uint8_t result = 0;
-    while(zyxt){ //Mientras haya al menos un 1
-        result++;
-        zyxt &= zyxt - 1; //Quito el LSb que tenga un 1
-    }
-    if(result > 4){
-        result = 0;
-    }
-    return result;
-}

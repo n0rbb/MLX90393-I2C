@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#define I2C_ADDR 0x0C
-#define MAG_XYZ 0x0E
+#define MLX90393_I2C_ADDR 0x0C
+#define MLX90393_MAG_XYZ 0x0E
 
 #define MLX90393_REG_CONF1 0x00
 #define MLX90393_REG_CONF3 0x02
@@ -12,8 +12,8 @@
 typedef struct mlx_i2c_t mlx_i2c_t;
 typedef struct mlx_cfg_t mlx_cfg_t;
 
-typedef int32_t (*mlx_wr_ptr)(mlx_i2c_t *handle, uint8_t *buf, size_t len);
-typedef int32_t (*mlx_rd_ptr)(mlx_i2c_t *handle, uint8_t *data, size_t len); // read the bus
+typedef int32_t (*mlx_wr_ptr)(mlx_i2c_t *dev, uint8_t *buf, size_t len);
+typedef int32_t (*mlx_rd_ptr)(mlx_i2c_t *dev, uint8_t *data, size_t len); // read the bus
 typedef void (*mlx_mdelay_ptr)(uint32_t ms);
 
 typedef enum mlx90393_gain {
@@ -80,7 +80,7 @@ struct mlx_cfg_t{
 };
 
 // USER FUNCTIONS
-int32_t MLX90393_Init(mlx_i2c_t *dev);
+int32_t MLX90393_Init(mlx_i2c_t *dev, mlx_cfg_t *settings);
 int32_t MLX90393_GetSettings(mlx_i2c_t *dev);
 int32_t MLX90393_ApplySettings(mlx_i2c_t *dev, mlx_cfg_t *new_settings);
 int32_t MLX90393_readXYZ(mlx_i2c_t *dev, float *xyz);
