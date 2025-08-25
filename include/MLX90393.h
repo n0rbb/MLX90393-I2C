@@ -2,6 +2,7 @@
 #define MLX90393_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #define MLX90393_I2C_ADDR 0x0C
 #define MLX90393_MAG_XYZ 0x0E

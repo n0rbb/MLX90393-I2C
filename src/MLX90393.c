@@ -321,17 +321,16 @@ int32_t MLX90393_NOP(mlx_i2c_t *dev, uint8_t *statusBuffer){
  * @return int32_t Error code
  */
 int32_t MLX90393_GetSettings(mlx_i2c_t *dev){
-    if (dev == NULL){
+    if (dev == NULL || dev->settings == NULL){
         return 1;
+    }
+    if(dev->settings == NULL){
+        dev->settings = (mlx_cfg_t *) malloc(sizeof(mlx_cfg_t));
     }
     int32_t ret;
     uint8_t status;
     uint8_t databuffer[2];
-    mlx_cfg_t* settings = (mlx_cfg_t*) malloc(sizeof(mlx_cfg_t));
-    if (settings == NULL) {
-        return -1;
-    }
-    memset(settings, 0, sizeof(mlx_cfg_t));
+    mlx_cfg_t *settings = (mlx_cfg_t *) malloc(sizeof(mlx_cfg_t));
     //Get current settings
     //Read Conf1
     ret = MLX90393_RR(dev, &status, MLX90393_REG_CONF1, databuffer);
@@ -345,7 +344,8 @@ int32_t MLX90393_GetSettings(mlx_i2c_t *dev){
     settings->resolution_y = (mlx90393_resolution_t) ((databuffer[0] << 1) & 0x02) | databuffer[1] >> 7;
     settings->resolution_z = (mlx90393_resolution_t) (databuffer[0] >> 1) & 0x03;
     
-    dev->settings = settings;
+    *(dev->settings) = *settings;
+    free(settings);
     return ret;
 }
 
@@ -360,6 +360,9 @@ int32_t MLX90393_GetSettings(mlx_i2c_t *dev){
 int32_t MLX90393_ApplySettings(mlx_i2c_t *dev, mlx_cfg_t *new_settings){
     if ((dev == NULL || new_settings == NULL)){
         return 1;
+    }
+    if(dev->settings == NULL){
+        dev->settings = (mlx_cfg_t *) malloc(sizeof(mlx_cfg_t));
     }
     int32_t ret;
     uint8_t status;
@@ -381,6 +384,8 @@ int32_t MLX90393_ApplySettings(mlx_i2c_t *dev, mlx_cfg_t *new_settings){
     newbuf |= (int) new_settings->resolution_y << 7;
     newbuf |= (int) new_settings->resolution_z << 9;
     ret  = MLX90393_WR(dev, &status, MLX90393_REG_CONF3, newbuf);
+    //Overwrite dev settings structure with 
+    *(dev->settings) = *new_settings;
     return ret;
 }
 
@@ -389,44 +394,46 @@ int32_t MLX90393_readXYZ(mlx_i2c_t *dev, float *xyz){
     if(dev == NULL || xyz == NULL){
         return 1;
     }
-    
+
+    //Copy the pointer to the settings for easier access later
+    mlx_cfg_t *curr_cfg = dev->settings;
+
     int32_t ret;
     uint8_t status;
-    
     /*Start measurement*/
     ret = MLX90393_SM(dev, MLX90393_MAG_XYZ, &status);
     if (ret != 0){
         return ret;
     }
-    /*Wait tconv*/
-    dev->mdelay((int) MLX90393_Tconv_LookUp[dev->settings->filter][dev->settings->oversampling] + 1); 
 
-    //Read measurement
+    /*Wait tconv*/
+    dev->mdelay((int) MLX90393_Tconv_LookUp[curr_cfg->filter][curr_cfg->oversampling] + 1); 
+
+    /*Read measurement*/
     uint8_t data[6];
     ret = MLX90393_RM(dev, MLX90393_MAG_XYZ, &status, data);
     if (ret != 0){
         return ret;
     }
-
-    //Convert to magnetic units
-    mlx_cfg_t curr_cfg = *dev->settings;
-
+    
+    /*Convert to magnetic units */
     int16_t xyz_tmp[3];
     xyz_tmp[0] = (data[0] << 8) | data[1];
     xyz_tmp[1] = (data[2] << 8) | data[3];
     xyz_tmp[2] = (data[4] << 8) | data[5]; 
 
-    if (curr_cfg.resolution_x == MLX90393_RES_18) xyz_tmp[0] -= 0x8000;
-    if (curr_cfg.resolution_x == MLX90393_RES_19) xyz_tmp[0] -= 0x4000;
-    if (curr_cfg.resolution_y == MLX90393_RES_18) xyz_tmp[1] -= 0x8000;
-    if (curr_cfg.resolution_y == MLX90393_RES_19) xyz_tmp[1] -= 0x4000;
-    if (curr_cfg.resolution_z == MLX90393_RES_18) xyz_tmp[2] -= 0x8000;
-    if (curr_cfg.resolution_z == MLX90393_RES_19) xyz_tmp[2] -= 0x4000;
+    if (curr_cfg->resolution_x == MLX90393_RES_18) xyz_tmp[0] -= 0x8000;
+    if (curr_cfg->resolution_x == MLX90393_RES_19) xyz_tmp[0] -= 0x4000;
+    if (curr_cfg->resolution_y == MLX90393_RES_18) xyz_tmp[1] -= 0x8000;
+    if (curr_cfg->resolution_y == MLX90393_RES_19) xyz_tmp[1] -= 0x4000;
+    if (curr_cfg->resolution_z == MLX90393_RES_18) xyz_tmp[2] -= 0x8000;
+    if (curr_cfg->resolution_z == MLX90393_RES_19) xyz_tmp[2] -= 0x4000;
 
-    xyz[0] = (float) xyz_tmp[0] * MLX90393_Sensitivity_LookUp[curr_cfg.gain][curr_cfg.resolution_x][0];
-    xyz[1] = (float) xyz_tmp[1] * MLX90393_Sensitivity_LookUp[curr_cfg.gain][curr_cfg.resolution_y][0];
-    xyz[2] = (float) xyz_tmp[2] * MLX90393_Sensitivity_LookUp[curr_cfg.gain][curr_cfg.resolution_z][1];
 
+    xyz[0] = (float) xyz_tmp[0] * MLX90393_Sensitivity_LookUp[curr_cfg->gain][curr_cfg->resolution_x][0];
+    xyz[1] = (float) xyz_tmp[1] * MLX90393_Sensitivity_LookUp[curr_cfg->gain][curr_cfg->resolution_y][0];
+    xyz[2] = (float) xyz_tmp[2] * MLX90393_Sensitivity_LookUp[curr_cfg->gain][curr_cfg->resolution_z][1];
+    
     return ret;
 }
 
@@ -447,7 +454,5 @@ int32_t MLX90393_Init(mlx_i2c_t *dev, mlx_cfg_t *settings){
     if (settings == NULL){ //If the user doesn't provide its own "new" settings, we test the device by reading the current settings and storing them to the dev structure
         return GetSettings(dev);
     }
-    return ApplySettings(dev, settings); //Otherwise, we overwrite the user settings
+    return ApplySettings(dev, settings); //Otherwise, we the user settings to the device registers
 }
-
-
