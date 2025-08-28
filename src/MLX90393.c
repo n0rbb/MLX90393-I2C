@@ -3,26 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/** Helper functions**/
-
-/**
- * @brief Helper function to find the number of quantities to measure (needed to compute the number of bytes to expect within sensor response to measurement read operations)
- * 
- * @param zyxt Magnetic axes-temperature measurement setting
- * @return uint8_t Count result (no greater than 4)
- */
-uint8_t count_set_bits(uint8_t zyxt){
-    uint8_t result = 0;
-    while(zyxt){ //Mientras haya al menos un 1
-        result++;
-        zyxt &= zyxt - 1; //Quito el LSb que tenga un 1
-    }
-    if(result > 4){
-        result = 0;
-    }
-    return result;
-}
-
 /**
  * @brief Helper function that calls automatically MLX90393_GetSettings(). This function is created for ease of unit testing.
  * 
@@ -35,6 +15,23 @@ __attribute__((weak)) int32_t GetSettings(mlx_i2c_t *dev){
 
 __attribute__((weak)) int32_t ApplySettings(mlx_i2c_t *dev, mlx_cfg_t *settings){
     return MLX90393_ApplySettings(dev, settings);
+}
+
+__attribute__((weak)) void *mlx_malloc(size_t s){
+    return malloc(s);
+}
+
+/** Helper functions**/
+uint8_t count_set_bits(uint8_t zyxt){
+    uint8_t result = 0;
+    while(zyxt){ //Mientras haya al menos un 1
+        result++;
+        zyxt &= zyxt - 1; //Quito el LSb que tenga un 1
+    }
+    if(result > 4){
+        result = 0;
+    }
+    return result;
 }
 //LOOKUPS
 //Magnetic sensitivity [Gain (0 - 7)][Res (16 - 19)][SensXY/SensZ]
@@ -321,16 +318,18 @@ int32_t MLX90393_NOP(mlx_i2c_t *dev, uint8_t *statusBuffer){
  * @return int32_t Error code
  */
 int32_t MLX90393_GetSettings(mlx_i2c_t *dev){
-    if (dev == NULL || dev->settings == NULL){
+    if (dev == NULL){
         return 1;
     }
     if(dev->settings == NULL){
-        dev->settings = (mlx_cfg_t *) malloc(sizeof(mlx_cfg_t));
+        dev->settings = (mlx_cfg_t *) mlx_malloc(sizeof(mlx_cfg_t));
+
+        if (dev->settings == NULL) return -1;
     }
     int32_t ret;
     uint8_t status;
     uint8_t databuffer[2];
-    mlx_cfg_t *settings = (mlx_cfg_t *) malloc(sizeof(mlx_cfg_t));
+    mlx_cfg_t *settings = (mlx_cfg_t *) mlx_malloc(sizeof(mlx_cfg_t));
     //Get current settings
     //Read Conf1
     ret = MLX90393_RR(dev, &status, MLX90393_REG_CONF1, databuffer);
@@ -362,7 +361,9 @@ int32_t MLX90393_ApplySettings(mlx_i2c_t *dev, mlx_cfg_t *new_settings){
         return 1;
     }
     if(dev->settings == NULL){
-        dev->settings = (mlx_cfg_t *) malloc(sizeof(mlx_cfg_t));
+        dev->settings = (mlx_cfg_t *) mlx_malloc(sizeof(mlx_cfg_t));
+
+        if(dev->settings == NULL) return -1; //Check the heap allocation doesn't fail
     }
     int32_t ret;
     uint8_t status;
