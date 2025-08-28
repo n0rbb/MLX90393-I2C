@@ -454,5 +454,5 @@ int32_t MLX90393_Init(mlx_i2c_t *dev, mlx_cfg_t *settings){
     if (settings == NULL){ //If the user doesn't provide its own "new" settings, we test the device by reading the current settings and storing them to the dev structure
         return GetSettings(dev);
     }
-    return ApplySettings(dev, settings); //Otherwise, we the user settings to the device registers
+    return ApplySettings(dev, settings); //Otherwise, we write the user settings to the device registers
 }
