@@ -85,20 +85,8 @@ int32_t MLX90393_Init(mlx_i2c_t *dev, mlx_cfg_t *settings);
 int32_t MLX90393_GetSettings(mlx_i2c_t *dev);
 int32_t MLX90393_ApplySettings(mlx_i2c_t *dev, mlx_cfg_t *new_settings);
 int32_t MLX90393_readXYZ(mlx_i2c_t *dev, float *xyz);
+void MLX90393_Free(mlx_i2c_t *dev);
 uint8_t count_set_bits(uint8_t zyxt);
-
-// COMMANDS
-int32_t MLX90393_EX(mlx_i2c_t *dev, uint8_t *statusBuffer);
-int32_t MLX90393_SB(mlx_i2c_t *dev, char zyxt, uint8_t *statusBuffer);
-int32_t MLX90393_SWOC(mlx_i2c_t *dev, char zyxt, uint8_t *statusBuffer);
-int32_t MLX90393_SM(mlx_i2c_t *dev, char zyxt, uint8_t *statusBuffer);
-int32_t MLX90393_RM(mlx_i2c_t *dev, char zyxt, uint8_t *statusBuffer, uint8_t *dataBuffer);
-int32_t MLX90393_RR(mlx_i2c_t *dev, uint8_t *statusBuffer, int reg_addr, uint8_t *dataBuffer);
-int32_t MLX90393_WR(mlx_i2c_t *dev, uint8_t *statusBuffer, int reg_addr, int data);
-int32_t MLX90393_HR(mlx_i2c_t *dev, uint8_t *statusBuffer);
-int32_t MLX90393_HS(mlx_i2c_t *dev, uint8_t *statusBuffer);
-int32_t MLX90393_RT(mlx_i2c_t *dev, uint8_t *statusBuffer);
-int32_t MLX90393_NOP(mlx_i2c_t *dev, uint8_t *statusBuffer);
 
 
 #endif

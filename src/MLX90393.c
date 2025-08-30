@@ -1,24 +1,23 @@
 #include "MLX90393.h"
+#include "MLX90393_cmds.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-/**
- * @brief Helper function that calls automatically MLX90393_GetSettings(). This function is created for ease of unit testing.
- * 
- * @param dev Handle to MLX90393 device
- * @return int32_t MLX90393_GetSettings error code
- */
-__attribute__((weak)) int32_t GetSettings(mlx_i2c_t *dev){
+int32_t __attribute__((weak)) GetSettings(mlx_i2c_t *dev){
     return MLX90393_GetSettings(dev);
 }
 
-__attribute__((weak)) int32_t ApplySettings(mlx_i2c_t *dev, mlx_cfg_t *settings){
+int32_t __attribute__((weak)) ApplySettings(mlx_i2c_t *dev, mlx_cfg_t *settings){
     return MLX90393_ApplySettings(dev, settings);
 }
 
-__attribute__((weak)) void *mlx_malloc(size_t s){
+void * __attribute__((weak)) mlx_malloc(size_t s){
     return malloc(s);
+}
+
+void __attribute__((weak)) mlx_free(void * memory){
+    return free(memory);
 }
 
 /** Helper functions**/
@@ -321,30 +320,32 @@ int32_t MLX90393_GetSettings(mlx_i2c_t *dev){
     if (dev == NULL){
         return 1;
     }
+
+    int32_t ret;
+    uint8_t status;
+    uint8_t databuffer[2];
+
     if(dev->settings == NULL){
         dev->settings = (mlx_cfg_t *) mlx_malloc(sizeof(mlx_cfg_t));
 
         if (dev->settings == NULL) return -1;
     }
-    int32_t ret;
-    uint8_t status;
-    uint8_t databuffer[2];
-    mlx_cfg_t *settings = (mlx_cfg_t *) mlx_malloc(sizeof(mlx_cfg_t));
+
     //Get current settings
     //Read Conf1
     ret = MLX90393_RR(dev, &status, MLX90393_REG_CONF1, databuffer);
-    settings->gain = (mlx90393_gain_t) (databuffer[1] >> 4) & 0x07;
+    dev->settings->gain = (mlx90393_gain_t) (databuffer[1] >> 4) & 0x07;
     //Read Conf3
     ret = MLX90393_RR(dev, &status, MLX90393_REG_CONF3, databuffer);
-    settings->oversampling = (mlx90393_oversampling_t) databuffer[1] & 0x03;
-    settings->filter = (mlx90393_filter_t) (databuffer[1] >> 2) & 0x07;
+    dev->settings->oversampling = (mlx90393_oversampling_t) databuffer[1] & 0x03;
+    dev->settings->filter = (mlx90393_filter_t) (databuffer[1] >> 2) & 0x07;
     
-    settings->resolution_x = (mlx90393_resolution_t) (databuffer[1] >> 5) & 0x03;
-    settings->resolution_y = (mlx90393_resolution_t) ((databuffer[0] << 1) & 0x02) | databuffer[1] >> 7;
-    settings->resolution_z = (mlx90393_resolution_t) (databuffer[0] >> 1) & 0x03;
+    dev->settings->resolution_x = (mlx90393_resolution_t) (databuffer[1] >> 5) & 0x03;
+    dev->settings->resolution_y = (mlx90393_resolution_t) ((databuffer[0] << 1) & 0x02) | databuffer[1] >> 7;
+    dev->settings->resolution_z = (mlx90393_resolution_t) (databuffer[0] >> 1) & 0x03;
     
-    *(dev->settings) = *settings;
-    free(settings);
+    //*(dev->settings) = *settings;
+    //free(settings);
     return ret;
 }
 
@@ -360,14 +361,17 @@ int32_t MLX90393_ApplySettings(mlx_i2c_t *dev, mlx_cfg_t *new_settings){
     if ((dev == NULL || new_settings == NULL)){
         return 1;
     }
+
+    int32_t ret;
+    uint8_t status;
+    uint8_t databuffer[2];
+
     if(dev->settings == NULL){
         dev->settings = (mlx_cfg_t *) mlx_malloc(sizeof(mlx_cfg_t));
 
         if(dev->settings == NULL) return -1; //Check the heap allocation doesn't fail
     }
-    int32_t ret;
-    uint8_t status;
-    uint8_t databuffer[2];
+    
     //Apply CONF1 register
     ret = MLX90393_RR(dev, &status, MLX90393_REG_CONF1, databuffer);
     int newbuf = databuffer[0] << 8 | databuffer[1];
@@ -456,4 +460,18 @@ int32_t MLX90393_Init(mlx_i2c_t *dev, mlx_cfg_t *settings){
         return GetSettings(dev);
     }
     return ApplySettings(dev, settings); //Otherwise, we write the user settings to the device registers
+}
+
+/**
+ * @brief Memory to de-init MLX90393 device (free structures of a given device)
+ * 
+ * @param dev Handle to MLX90393 device
+ */
+void MLX90393_Free(mlx_i2c_t *dev){
+    if (dev != NULL) {
+        if (dev->settings != NULL){
+            mlx_free(dev->settings);
+        }
+        mlx_free(dev); 
+    }
 }
