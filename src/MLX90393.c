@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+//GCOV_EXCL_START
 int32_t __attribute__((weak)) GetSettings(mlx_i2c_t *dev){
     return MLX90393_GetSettings(dev);
 }
@@ -20,18 +20,6 @@ void __attribute__((weak)) mlx_free(void * memory){
     return free(memory);
 }
 
-/** Helper functions**/
-uint8_t count_set_bits(uint8_t zyxt){
-    uint8_t result = 0;
-    while(zyxt){ //Mientras haya al menos un 1
-        result++;
-        zyxt &= zyxt - 1; //Quito el LSb que tenga un 1
-    }
-    if(result > 4){
-        result = 0;
-    }
-    return result;
-}
 //LOOKUPS
 //Magnetic sensitivity [Gain (0 - 7)][Res (16 - 19)][SensXY/SensZ]
 const float MLX90393_Sensitivity_LookUp[8][4][2] = {
@@ -72,6 +60,19 @@ const float MLX90393_Tconv_LookUp[8][4] = {
     //Dig_filt 7
     {25.65, 50.61, 100.53, 200.37}
 };
+//GCOV_EXCL_STOP
+/** Helper functions**/
+uint8_t count_set_bits(uint8_t zyxt){
+    uint8_t result = 0;
+    while(zyxt){ //Mientras haya al menos un 1
+        result++;
+        zyxt &= zyxt - 1; //Quito el LSb que tenga un 1
+    }
+    if(result > 4){
+        result = 0;
+    }
+    return result;
+}
 
 //COMMANDS
 /**
