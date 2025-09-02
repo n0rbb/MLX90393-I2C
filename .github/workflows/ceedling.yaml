@@ -53,5 +53,5 @@ jobs:
           filename: failedbadge.json
           label: Failed tests
           message: ${{ env.FAIL }} / ${{ env.TESTS }}
-          color: green
+          color: red
           style: for-the-badge
