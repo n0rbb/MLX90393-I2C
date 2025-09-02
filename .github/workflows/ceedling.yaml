@@ -1,0 +1,57 @@
+name: Ceedling Testing
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '**.c'
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Current Repo Clone
+        uses: actions/checkout@v4
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
+      - name: Install Ceedling
+        run: gem install ceedling -v 0.31.1
+
+      - name: Run Unit Tests
+        run: |
+          CUR=$PWD; cd $CUR; echo $CUR; TOUT=$(ceedling test:all);
+          TESTED=$(echo "$TOUT" | grep "TESTED:" | awk '{print $2}');
+          PASSED=$(echo "$TOUT" | grep "PASSED:" | awk '{print $2}');
+          FAILED=$(echo "$TOUT" | grep "FAILED:" | awk '{print $2}');
+          IGNORED=$(echo "$TOUT" | grep "IGNORED:" | awk '{print $2}');
+          
+          echo "TESTS=$TESTED" >> $GITHUB_ENV;
+          echo "PASS=$PASSED" >> $GITHUB_ENV;
+          echo "FAIL=$FAILED" >> $GITHUB_ENV;
+          echo "IGNORE=$IGNORED" >> $GITHUB_ENV;
+
+
+      - name : Create Passed Badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.BADGE_GIST_SECRET }}
+          gistID: ce4569d6e76a307b65ea7f084baa2399
+          filename: passedbadge.json
+          label: Passed tests
+          message: ${{ env.PASS }} / ${{ env.TESTS }}
+          color: green
+          style: for-the-badge
+
+      - name : Create Failed Badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.BADGE_GIST_SECRET }}
+          gistID: ce4569d6e76a307b65ea7f084baa2399
+          filename: failedbadge.json
+          label: Failed tests
+          message: ${{ env.FAIL }} / ${{ env.TESTS }}
+          color: red
+          style: for-the-badge
