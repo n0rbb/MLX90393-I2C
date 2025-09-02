@@ -22,7 +22,7 @@ jobs:
 
       - name: Run Unit Tests
         run: |
-          CUR=$PWD; cd $CUR; echo $CUR; TOUT=$(ceedling test:all); done;
+          CUR=$PWD; cd $CUR; echo $CUR; TOUT=$(ceedling test:all);
           TESTED=$(echo "$TOUT" | grep "TESTED:" | awk '{print $2}');
           PASSED=$(echo "$TOUT" | grep "PASSED:" | awk '{print $2}');
           FAILED=$(echo "$TOUT" | grep "FAILED:" | awk '{print $2}');
